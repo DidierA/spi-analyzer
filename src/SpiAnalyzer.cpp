@@ -225,7 +225,6 @@ bool SpiAnalyzer::WouldAdvancingTheClockToggleEnable( bool add_disable_frame, U6
 void SpiAnalyzer::GetWord()
 {
     // we're assuming we come into this function with the clock in the idle state;
-
     const U32 bits_per_transfer = mSettings->mBitsPerTransfer;
     const U32 bytes_per_transfer = ( bits_per_transfer + 7 ) / 8;
 
@@ -249,7 +248,7 @@ void SpiAnalyzer::GetWord()
             CheckIfThreadShouldExit();
 
         // on every single edge, we need to check that enable doesn't toggle.
-        // note that we can't just advance the enable line to the next edge, becuase there may not be another edge
+        // note that we can't just advance the enable line to the next edge, because there may not be another edge
 
         if( WouldAdvancingTheClockToggleEnable( true, nullptr ) == true )
         {
@@ -257,7 +256,16 @@ void SpiAnalyzer::GetWord()
             return;
         }
 
-        mClock->AdvanceToNextEdge();
+        // ignore when clock stays high too long
+        // FIXME: add a parameter :
+        //  bool    - if this option is activated
+        // float?   - maximum time between two transitions (fixed at 15 samples here)
+        mClock->AdvanceToNextEdge() ;
+
+        // jump until next transition is within 30 ns (15 samples)
+        while (!mClock->WouldAdvancingCauseTransition(15)) {
+            mClock->AdvanceToNextEdge();
+        }
         if( i == 0 )
             first_sample = mClock->GetSampleNumber();
 
@@ -387,12 +395,12 @@ U32 SpiAnalyzer::GetMinimumSampleRateHz()
 
 const char* SpiAnalyzer::GetAnalyzerName() const
 {
-    return "SPI";
+    return "Custom SPI";
 }
 
 const char* GetAnalyzerName()
 {
-    return "SPI";
+    return "Custom SPI";
 }
 
 Analyzer* CreateAnalyzer()
